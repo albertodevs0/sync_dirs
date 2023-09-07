@@ -50,8 +50,13 @@ def sync_directories(source_folder, replica_folder):
             source_path = os.path.join(source_folder, relative_path)
 
             if not os.path.exists(source_path):
-                os.rmdir(replica_path)
-                logging.info(f"The folder {replica_path} has been deleted")
+
+                # todo: when removing a directory that is populated, the parent dir doesn't get removed instantly
+                try:
+                    os.rmdir(replica_path)
+                    logging.info(f"The folder {replica_path} has been deleted")
+                except:
+                    sync_directories(source_path, replica_path)
 
         for file in files:
 
@@ -65,7 +70,8 @@ def sync_directories(source_folder, replica_folder):
             # check if the file still exists
             if not os.path.exists(source_path):
                 os.remove(replica_path)
-                logging.info(f"The file {replica_path} has been removed")
+                logging.info(f"The file {replica_path} has been deleted")
+
 
 def main():
     # define parser
