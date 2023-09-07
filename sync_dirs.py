@@ -9,7 +9,7 @@ def sync_directories(source_folder, replica_folder):
     for root, dirs, files in os.walk(source_folder):
         for directory in dirs:
 
-            # get the path used to check if the folder already exists
+            # get the source path and directory relative path
             source_path = os.path.join(root, directory)
             relative_path = os.path.relpath(source_path, source_folder)
 
@@ -23,7 +23,7 @@ def sync_directories(source_folder, replica_folder):
 
         for file in files:
 
-            # get the path used to check if the file already exists
+            # get the source path and file relative path
             source_path = os.path.join(root, file)
             relative_path = os.path.relpath(source_path, source_folder)
 
@@ -42,7 +42,7 @@ def sync_directories(source_folder, replica_folder):
     for root, dirs, files in os.walk(replica_folder):
         for directory in dirs:
 
-            # get the path used to check if a folder still exists
+            # get the replica path and directory relative path
             replica_path = os.path.join(root, directory)
             relative_path = os.path.relpath(replica_path, replica_folder)
 
@@ -55,7 +55,7 @@ def sync_directories(source_folder, replica_folder):
 
         for file in files:
 
-            # get the path used to check if a file still exists
+            # get the replica path and file relative path
             replica_path = os.path.join(root, file)
             relative_path = os.path.relpath(replica_path, replica_folder)
 
