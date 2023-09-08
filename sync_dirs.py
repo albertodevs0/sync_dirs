@@ -5,6 +5,52 @@ import os
 import shutil
 
 
+def delete_dirs(root, dirs, replica_folder, source_folder):
+    for directory in dirs:
+
+        # get the replica path and directory relative path
+        replica_path = os.path.join(root, directory)
+        relative_path = os.path.relpath(replica_path, replica_folder)
+
+        # build the source path
+        source_path = os.path.join(source_folder, relative_path)
+
+        if not os.path.exists(source_path):
+
+            # the file gets removed
+            subdirectories = []
+            for file in os.listdir(replica_path):
+
+                if os.path.isdir(os.path.join(replica_path, file)):
+                    subdirectories.append(file)
+                elif os.path.isfile(os.path.join(replica_path, file)):
+                    delete_files(replica_path, [file], replica_folder, source_folder)
+
+            # if there are still subdirectories in this folder I simply keep on scanning until I don't find one anymore
+            # mainly do this so that every delete is logged, otherwise could've avoided recursion and used
+            # shutil.rmtree(replica_path)
+            if subdirectories:
+                delete_dirs(replica_path, subdirectories, replica_folder, source_folder)
+
+            logging.info(f"The folder {replica_path} has been deleted")
+            os.rmdir(replica_path)
+
+
+def delete_files(root, files, replica_folder, source_folder):
+    for file in files:
+
+        # get the replica path and directory relative path
+        replica_path = os.path.join(root, file)
+        relative_path = os.path.relpath(replica_path, replica_folder)
+
+        # build the source path
+        source_path = os.path.join(source_folder, relative_path)
+
+        if not os.path.exists(source_path):
+            logging.info(f"The file {replica_path} has been deleted")
+            os.remove(replica_path)
+
+
 def sync_directories(source_folder, replica_folder):
     for root, dirs, files in os.walk(source_folder):
         for directory in dirs:
@@ -40,50 +86,23 @@ def sync_directories(source_folder, replica_folder):
                 logging.info(f"The file {replica_path} has been updated")
 
     for root, dirs, files in os.walk(replica_folder):
-        for directory in dirs:
-
-            # get the replica path and directory relative path
-            replica_path = os.path.join(root, directory)
-            relative_path = os.path.relpath(replica_path, replica_folder)
-
-            # build the source path
-            source_path = os.path.join(source_folder, relative_path)
-
-            if not os.path.exists(source_path):
-
-                # todo: when removing a directory that is populated, the parent dir doesn't get removed instantly
-                try:
-                    os.rmdir(replica_path)
-                    logging.info(f"The folder {replica_path} has been deleted")
-                except:
-                    sync_directories(source_path, replica_path)
-
-        for file in files:
-
-            # get the replica path and file relative path
-            replica_path = os.path.join(root, file)
-            relative_path = os.path.relpath(replica_path, replica_folder)
-
-            # build the source path
-            source_path = os.path.join(source_folder, relative_path)
-
-            # check if the file still exists
-            if not os.path.exists(source_path):
-                os.remove(replica_path)
-                logging.info(f"The file {replica_path} has been deleted")
+        delete_dirs(root, dirs, replica_folder, source_folder)
+        delete_files(root, files, replica_folder, source_folder)
 
 
 def main():
     # define parser
-    data_parser = argparse.ArgumentParser(description="This is a program that can be used to sync two directories")
+    data_parser = argparse.ArgumentParser(description="script used to continuously sync the directory content into "
+                                                      "another")
 
     # define the parser arguments
-    data_parser.add_argument("source_folder", help="The source folder to get the content from")
-    data_parser.add_argument("replica_folder", help="The replica folder to copy the content to")
-    data_parser.add_argument("--time",
-                             help="Specify how much time it will pass before repeating the synchronization process (it is expressed in seconds)",
+    data_parser.add_argument("source_folder", help="the source folder to get the content from")
+    data_parser.add_argument("replica_folder", help="the replica folder to copy the content to")
+    data_parser.add_argument("--wait_time",
+                             help="specify a waiting time between synchronizations (expressed in seconds)",
                              type=int, default=60)
-    data_parser.add_argument("--logfile", help="Specify a log file for the logging", default="sync_log.log")
+    data_parser.add_argument("--logfile", help="specify a log file to record every event",
+                             default="sync_log.log")
 
     # get the arguments values
     sync_arguments = data_parser.parse_args()
@@ -93,11 +112,15 @@ def main():
                         handlers=[logging.FileHandler(sync_arguments.logfile), logging.StreamHandler()])
 
     while True:
-        logging.info("Synchronization started")
+        logging.info("---- Synchronization started ----")
         sync_directories(sync_arguments.source_folder, sync_arguments.replica_folder)
-        logging.info("Synchronization finished")
-        time.sleep(sync_arguments.time)
+        logging.info("---- Synchronization finished ----")
+        time.sleep(sync_arguments.wait_time)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logging.info("---- Synchronization process stopped ----")
+        logging.info("---- Exiting program ----")
