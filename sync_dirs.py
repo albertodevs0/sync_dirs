@@ -123,4 +123,3 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         logging.info("---- Synchronization process stopped ----")
-        logging.info("---- Exiting program ----")
